@@ -12,16 +12,14 @@ object Client {
 		lazy val in = new BufferedSource(s.getInputStream()).getLines()
 		val out = new PrintStream(s.getOutputStream())
 		
-		out.println("associar")
+		out.println("remover")
 		out.flush()
 		
 		val response = in.next()
 		println("\nClient Received: " + response)
 		
-		val addrOperation, asd = response.split(":")(0)
-		
-		println(addrOperation + " / " + asd)
-		
+		val (addrOperation, port) = (response.split(":")(0), response.split(":")(1))
+	
 		s.close()
 	}
 }

@@ -9,9 +9,10 @@ object NameServer {
 	
 	val ADDR_SERVERS = Map(
 		OPERATION(0) -> Array("127.0.0.1:6789"),
-		OPERATION(1) -> Array("127.0.0.2:6789"),
-		OPERATION(2) -> Array("127.0.0.3:6789")
+		OPERATION(1) -> Array("127.0.0.1:6789"),
+		OPERATION(2) -> Array("127.0.0.1:6789")
 	)
+	
 	
 	def main(args: Array[String]): Unit = {
 		ADDR_SERVERS.foreach{ case(key, value) => println(value(0)) }
@@ -25,6 +26,7 @@ object NameServer {
 
 	}
 	
+	
 	def createServer(address: String, port: Int):ServerSocket = {
 		val addr = InetAddress.getByName(address)
 		
@@ -33,6 +35,7 @@ object NameServer {
 		
 		server
 	}
+	
 	
 	def listenServer(server: ServerSocket) = {
 		while (true) {
