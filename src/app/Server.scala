@@ -5,10 +5,12 @@ import java.io._
 import scala.io._
 
 object Server {
-	val FUNCTIONS = Map[String, (String*)=>String](
-		"associar" -> associar,
-		"remover" -> remover,
-		"recuperar" -> recuperar
+	val connection = new SqliteConnection()
+	
+	val FUNCTIONS = Map[String, (String*)=>Any](
+		"ASSOCIAR" -> associar,
+		"REMOVER" -> remover,
+		"RECUPERAR" -> recuperar
 	)
 	
 	def main(args: Array[String]): Unit = {
@@ -21,38 +23,43 @@ object Server {
 		while (true) {
 		    val s = server.accept()
 		    val in = new BufferedSource(s.getInputStream()).getLines()
-		    val out = new PrintStream(s.getOutputStream())
+
+		    val operation = in.next().split("#@#")
+		    val typeOperation = operation(0).toUpperCase()
+		    println("\nServer Received: " + typeOperation)
 		    
-		    val operation = in.next().split(",")
-		    println("\nServer Received: " + operation(0))
-		    
-		    
-		    val response = if( FUNCTIONS.contains(operation(0)) ){
-		    	FUNCTIONS(operation(0))(operation.tail)
-		    }
-		    else{
+		    val response = if( FUNCTIONS.contains(typeOperation) )
+		    	FUNCTIONS(typeOperation)(operation.tail)
+		    else
 		    	error()
-		    }
-		    
-		    out.println(response)
-		    out.flush()
+
+		    var out = new ObjectOutputStream(s.getOutputStream());
+		    out.writeObject(response)
 		    s.close()
 		}
 	}
 	
 	def associar(value: String*) = {
-		println("associar")
-		"associar"
+		if(connection.insert(value(0), (value(1), value(2).toLong, value(3).toDouble)))
+			"adicionado com sucesso"
+		else
+			null
 	}
 	
 	def remover(value: String*) = {
-		println("remover")
-		"remover"
+		if(connection.delete(value(0)))
+			"removido com sucesso"
+		else
+			null
 	}
 	
-	def recuperar(value: String*) = {
-		println("recuperar")
-		"recuperar"
+	def recuperar(value: String*): Array[(String, Long, Double)] = {
+		val tickets = connection.selectAllTicket(value(0))
+
+		if(tickets.length == 0)
+			null
+		else
+			tickets
 	}
 	
 	

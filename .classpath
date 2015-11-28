@@ -4,5 +4,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_CONTAINER"/>
 	<classpathentry kind="lib" path="jar/sqlite-jdbc-3.8.11.2.jar"/>
+	<classpathentry kind="lib" path="jar/scala-swing_2.11-2.0.0-M2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
