@@ -40,20 +40,20 @@ object Server {
 	}
 	
 	def associar(value: String*) = {
-		if(connection.insert(value(0), (value(1), value(2).toLong, value(3).toDouble)))
-			"adicionado com sucesso"
+		if(connection.insert(value(0), (value(1), value(2), value(3).toDouble)))
+			"added successfully"
 		else
 			null
 	}
 	
 	def remover(value: String*) = {
 		if(connection.delete(value(0)))
-			"removido com sucesso"
+			"removed successfully"
 		else
 			null
 	}
 	
-	def recuperar(value: String*): Array[(String, Long, Double)] = {
+	def recuperar(value: String*): Array[(String, String, Double)] = {
 		val tickets = connection.selectAllTicket(value(0))
 
 		if(tickets.length == 0)

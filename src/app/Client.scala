@@ -43,8 +43,8 @@ class UI(var funcConnect: (String) => Object){
 	
 	def printResponse(response:Object):String = {
 		var strObj = ""
-		if(response.isInstanceOf[Array[(String, Long, Double)]]){
-			val obj = response.asInstanceOf[Array[(String, Long, Double)]]
+		if(response.isInstanceOf[Array[(String, String, Double)]]){
+			val obj = response.asInstanceOf[Array[(String, String, Double)]]
 			
 			for(o <- obj){
 				strObj +=
@@ -181,13 +181,17 @@ object Client {
 			out.flush()
 			
 			val response = in.next()
-			println("\nClient Received: " + response)
-		
-			s.close()
+			if(response != ""){
+				println("\nClient Received: " + response)
 			
-			val (addrOperation, port) = (response.split(":")(0), response.split(":")(1))
-			
-			sendCommand(addrOperation, port.toInt, command)
+				s.close()
+				
+				val (addrOperation, port) = (response.split(":")(0), response.split(":")(1))
+				
+				sendCommand(addrOperation, port.toInt, command)
+			}
+			else
+				"Operation not exist"
 		}
 		catch{
 			case e:ConnectException => "Server Error"
