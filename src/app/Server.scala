@@ -5,6 +5,7 @@ import java.io._
 import scala.io._
 
 object Server {
+	val separator = "#@#"
 	val connection = new SqliteConnection()
 	
 	val FUNCTIONS = Map[String, (String*)=>Any](
@@ -24,9 +25,14 @@ object Server {
 		    val s = server.accept()
 		    val in = new BufferedSource(s.getInputStream()).getLines()
 
-		    val operation = in.next().split("#@#")
+		    val request = in.next()
+		    
+		    val operation = request.split(separator)
 		    val typeOperation = operation(0).toUpperCase()
 		    println("\nServer Received: " + typeOperation)
+		    
+		    if(typeOperation != "RECUPERAR")
+		    	replicatesToAll(request)
 		    
 		    val response = if( FUNCTIONS.contains(typeOperation) )
 		    	FUNCTIONS(typeOperation)(operation.tail)
@@ -66,5 +72,52 @@ object Server {
 	def error() = {
 		println("error")
 		"ERROR"
+	}
+	
+	
+	//replicates operation to all servers
+	def replicatesToAll(command:String) = {
+		val addrServer = "localhost"
+		val addrPort = 5000
+		
+		try{
+			val s = new Socket(InetAddress.getByName(addrServer), addrPort)
+			lazy val in = new BufferedSource(s.getInputStream()).getLines()
+			val out = new PrintStream(s.getOutputStream())
+			
+			out.println("GET_ALL_SERVERS")
+			out.flush()
+			
+			val request = in.next()
+			s.close()
+			
+			if(request != ""){
+				for(addresses <- request.split(separator)){
+					val (addrOperation, port) = (addresses.split(":")(0), addresses.split(":")(1))
+					sendCommand(addrOperation, port.toInt, command)
+				}
+			}
+			else
+				"Server Naee not respond"
+		}
+		catch{
+			case e:ConnectException => "Server Name Error"
+		}
+	}
+	
+	//send command to other server
+	def sendCommand(addr:String, port:Int, command:String) = {
+		val s = new Socket(InetAddress.getByName(addr), port)
+		val out = new PrintStream(s.getOutputStream())
+		
+		out.println(command)
+		out.flush()
+		
+		val in = new ObjectInputStream(s.getInputStream());
+		val obj = in.readObject()
+		
+		s.close()
+		
+		obj
 	}
 }

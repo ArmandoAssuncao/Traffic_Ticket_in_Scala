@@ -5,12 +5,13 @@ import java.io._
 import scala.io._
 
 object NameServer {
+	val separator = "#@#"
 	val OPERATION = Array("ASSOCIAR", "REMOVER", "RECUPERAR")
 	
 	val ADDR_SERVERS = Map(
-		OPERATION(0) -> Array("127.0.0.1:6789","127.0.0.1:6789","127.0.0.1:6789","127.0.0.1:6789"),
-		OPERATION(1) -> Array("127.0.0.1:6789"),
-		OPERATION(2) -> Array("127.0.0.1:6789","127.0.0.1:6789","127.0.0.1:6789")
+		OPERATION(0) -> Set("127.0.0.1:6789","127.0.0.1:6789","127.0.0.1:6789","127.0.0.1:6789"),
+		OPERATION(1) -> Set("127.0.0.1:6789"),
+		OPERATION(2) -> Set("127.0.0.1:6789","127.0.0.1:6789","127.0.0.1:6789")
 	)
 	
 	//last server used of each operation
@@ -21,8 +22,6 @@ object NameServer {
 	)
 	
 	def main(args: Array[String]): Unit = {
-		//ADDR_SERVERS.foreach{ case(key, value) => println(value(0)) }
-		
 		val addr = "localhost"
 		val port = 5000
 		val server = createServer(addr, port)
@@ -52,9 +51,18 @@ object NameServer {
 			
 			var response = ""
 
-			ADDR_SERVERS.foreach{ case(key, value) =>
-				if(key.equalsIgnoreCase(operation))
-					response = value(loadBalancing(operation))
+			if(operation.toUpperCase() == "GET_ALL_SERVERS"){
+				ADDR_SERVERS.foreach{ case(key, value) =>
+					value.foreach {
+						response += _ + separator
+					}
+				}
+			}
+			else{
+				ADDR_SERVERS.foreach{ case(key, value) =>
+					if(key.equalsIgnoreCase(operation))
+						response = value.toList(loadBalancing(operation))
+				}
 			}
 			
 			out.println(response)
@@ -70,7 +78,7 @@ object NameServer {
 		val oper = operation.toUpperCase()
 		if(BALANCING_SERVERS.contains(oper)){
 			response = BALANCING_SERVERS(oper)
-			if(BALANCING_SERVERS(oper) < ADDR_SERVERS(oper).length -1)
+			if(BALANCING_SERVERS(oper) < ADDR_SERVERS(oper).size -1)
 				BALANCING_SERVERS(oper) += 1
 			else
 				BALANCING_SERVERS(oper) = 0

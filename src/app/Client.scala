@@ -6,7 +6,7 @@ import scala.io._
 import scala.swing._
 import java.awt.GridBagConstraints
 
-class UI(var funcConnect: (String) => Object){
+class UI(val funcConnect: (String) => Object, val separator:String){
 	private val comboBox = new ComboBox(List("Associar", "Remover", "Recuperar"))
 	private val fieldLicense = new TextField { columns = 15 }
 	private val fieldDate = new TextField { columns = 15 }
@@ -20,7 +20,6 @@ class UI(var funcConnect: (String) => Object){
 	def createRequest():String = {
     	var command:String = ""
     	val value = comboBox.item.toUpperCase()
-    	val separator = "#@#"
     	
     	if(fieldLicense.text != ""){
 	    	if(value == "ASSOCIAR"){
@@ -163,11 +162,12 @@ class UI(var funcConnect: (String) => Object){
 }
 
 object Client {
+	val separator = "#@#"
 	val addrServer = "localhost"
 	val addrPort = 5000
 	
 	def main(args: Array[String]): Unit = {
-		val ui = new UI(connectServer)
+		val ui = new UI(connectServer, separator)
     	ui.frame.visible = true
 	}
 	
@@ -177,15 +177,15 @@ object Client {
 			lazy val in = new BufferedSource(s.getInputStream()).getLines()
 			val out = new PrintStream(s.getOutputStream())
 			
-			out.println(command.split("#@#")(0))
+			out.println(command.split(separator)(0))
 			out.flush()
 			
 			val response = in.next()
+			s.close()
+			
 			if(response != ""){
 				println("\nClient Received: " + response)
 			
-				s.close()
-				
 				val (addrOperation, port) = (response.split(":")(0), response.split(":")(1))
 				
 				sendCommand(addrOperation, port.toInt, command)
