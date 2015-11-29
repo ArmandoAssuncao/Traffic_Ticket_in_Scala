@@ -5,6 +5,7 @@ import java.io._
 import scala.io._
 
 object Server {
+	val nameFileKey = "key.txt"
 	val addr = InetAddress.getByName("localhost")
 	val port = 6789
 	
@@ -22,42 +23,54 @@ object Server {
 		println("Server running in: " + server.getInetAddress().getHostAddress + ":" + server.getLocalPort)
 		
 		while (true) {
-		    val s = server.accept()
-		    val in = new BufferedSource(s.getInputStream()).getLines()
+		    var s = server.accept()
+		    val input = s.getInputStream()
 
-		    if(!in.isEmpty){
-			    val request = in.next()
-			    var response = new Object()
+		    if(input.available() != 0){
+			    var in = new ObjectInputStream(input)
 			    
-			    val operation = request.split(separator)
-			    val typeOperation = operation.head.toUpperCase()
-			    println("\nServer Received: " + typeOperation)
-			    
-			    //exec when command not is replicate
-			    if(operation.head != "REPLICATE"){
-				    response = if( FUNCTIONS.contains(typeOperation) )
-				    	FUNCTIONS(typeOperation)(operation.tail)
-				    else
-				    	error()
-				    	
-				    if(typeOperation !="RECUPERAR"){
-				    	replicatesToAll(request)
+			    if(true){
+				    val request = in.readObject()
+				    
+				    //decrypt command
+					var requestStr = ""
+					if(request.isInstanceOf[Array[Byte]]){
+						requestStr = EncryptAES.decryption(request.asInstanceOf[Array[Byte]], EncryptAES.readKeyInFile(nameFileKey))
+						requestStr = requestStr.toUpperCase()
+					}
+				    var response = new Object()
+				    
+				    val operation = requestStr.split(separator)
+				    val typeOperation = operation.head.toUpperCase()
+				    println("\nServer Received: " + typeOperation)
+				    
+				    //exec when command not is replicate
+				    if(operation.head != "REPLICATE"){
+					    response = if( FUNCTIONS.contains(typeOperation) )
+					    	FUNCTIONS(typeOperation)(operation.tail)
+					    else
+					    	error()
+
+					    if(typeOperation !="RECUPERAR"){
+					    	replicatesToAll(requestStr)
+					    }
 				    }
+				    else{
+				    	var operReply = requestStr.split(separator).tail
+				    	var typeOperReply = operReply.head.toUpperCase()
+				    	
+				    	response = if( FUNCTIONS.contains(typeOperReply) )
+					    	FUNCTIONS(typeOperReply)(operReply.tail)
+					    else
+					    	error()
+				    }
+				    
+				    var out = new ObjectOutputStream(s.getOutputStream());
+				    out.writeObject(response)
 			    }
-			    else{
-			    	var operReply = request.split(separator).tail
-			    	var typeOperReply = operReply.head.toUpperCase()
-			    	
-			    	response = if( FUNCTIONS.contains(typeOperReply) )
-				    	FUNCTIONS(typeOperReply)(operReply.tail)
-				    else
-				    	error()
-			    }
-	
-			    var out = new ObjectOutputStream(s.getOutputStream());
-			    out.writeObject(response)
 		    }
 		    s.close()
+		    //println("end connection")
 		}
 	}
 	
@@ -98,22 +111,33 @@ object Server {
 		
 		try{
 			val s = new Socket(InetAddress.getByName(addrServer), addrPort)
-			lazy val in = new BufferedSource(s.getInputStream()).getLines()
-			val out = new PrintStream(s.getOutputStream())
+			lazy val in = new ObjectInputStream(s.getInputStream())
+			val out = new ObjectOutputStream(s.getOutputStream())
 			
-			out.println("GET_ALL_SERVERS")
+			val commandGetServers = "GET_ALL_SERVERS"
+			//encrypt response
+			val responseBytes = EncryptAES.encryption(commandGetServers, EncryptAES.readKeyInFile(nameFileKey))
+			
+			out.writeObject(responseBytes)
 			out.flush()
 			
-			val request = in.next()
+			val request = in.readObject()
 			s.close()
 			
-			if(request != ""){
-				var arrayBuffer = request.split(separator).toSet.to[collection.mutable.ArrayBuffer]
+			//decrypt command
+			var requestStr = ""
+			if(request.isInstanceOf[Array[Byte]]){
+				requestStr = EncryptAES.decryption(request.asInstanceOf[Array[Byte]], EncryptAES.readKeyInFile(nameFileKey))
+				requestStr = requestStr.toUpperCase()
+			}
+		    var response = new Object()
+			
+			if(requestStr != ""){
+				var arrayBuffer = requestStr.split(separator).toSet.to[collection.mutable.ArrayBuffer]
 				val myAddress = addr.getHostAddress+":"+port
 				arrayBuffer -= myAddress
 				
 				for(address <- arrayBuffer){
-					println("address: " + address)
 					val (addrOperation, port) = (address.split(":")(0), address.split(":")(1))
 					sendCommand(addrOperation, port.toInt, "REPLICATE" + separator + command)
 				}
@@ -131,9 +155,12 @@ object Server {
 		var obj = new Object()
 		try{
 			val s = new Socket(InetAddress.getByName(addr), port)
-			val out = new PrintStream(s.getOutputStream())
+			val out = new ObjectOutputStream(s.getOutputStream())
 			
-			out.println(command)
+			//encrypt response
+			val responseBytes = EncryptAES.encryption(command, EncryptAES.readKeyInFile(nameFileKey))
+			
+			out.writeObject(responseBytes)
 			out.flush()
 			
 			val in = new ObjectInputStream(s.getInputStream());

@@ -76,8 +76,10 @@ class UI(val funcConnect: (String) => Object, val separator:String){
 			case event.ButtonClicked(this.btnEnter) => {
 				val request:String = createRequest()
 				var response = new Object()
-				if(request != "")
+				if(request != ""){
 					response = funcConnect(request)
+					printResponse(response)
+				}
 				else
 					response = "Complete all fields"
 			}
@@ -160,6 +162,7 @@ class UI(val funcConnect: (String) => Object, val separator:String){
 }
 
 object Client {
+	val nameFileKey = "key.txt"
 	val separator = "#@#"
 	val addrServer = "localhost" //address Server Name
 	val addrPort = 5000
@@ -172,18 +175,28 @@ object Client {
 	def connectServer(command: String) = {
 		try{
 			val s = new Socket(InetAddress.getByName(addrServer), addrPort)
-			lazy val in = new BufferedSource(s.getInputStream()).getLines()
-			val out = new PrintStream(s.getOutputStream())
+			lazy val in = new ObjectInputStream(s.getInputStream())
 			
-			out.println(command.split(separator)(0))
+			//ncrypt command
+			val commandBytes = EncryptAES.encryption(command.split(separator)(0), EncryptAES.readKeyInFile(nameFileKey))
+
+			val out = new ObjectOutputStream(s.getOutputStream())			
+			out.writeObject(commandBytes)
 			out.flush()
 			
-			val response = in.next()
+			val objResponse = in.readObject()
+			
 			s.close()
 			
+			//decrypt response
+			var response = ""
+			if(objResponse.isInstanceOf[Array[Byte]]){
+				response = EncryptAES.decryption(objResponse.asInstanceOf[Array[Byte]], EncryptAES.readKeyInFile(nameFileKey))
+				response = response.toUpperCase()
+			}
+
+			println("\nClient Received: " + response)
 			if(response != ""){
-				println("\nClient Received: " + response)
-			
 				val (addrOperation, port) = (response.split(":")(0), response.split(":")(1))
 				
 				sendCommand(addrOperation, port.toInt, command)
@@ -199,9 +212,11 @@ object Client {
 	//send command to operations server
 	def sendCommand(addr:String, port:Int, command:String) = {
 		val s = new Socket(InetAddress.getByName(addr), port)
-		val out = new PrintStream(s.getOutputStream())
+		val out = new ObjectOutputStream(s.getOutputStream())
 		
-		out.println(command)
+		//encrypt command
+		val commandBytes = EncryptAES.encryption(command, EncryptAES.readKeyInFile(nameFileKey))
+		out.writeObject(commandBytes)
 		out.flush()
 		
 		val in = new ObjectInputStream(s.getInputStream());

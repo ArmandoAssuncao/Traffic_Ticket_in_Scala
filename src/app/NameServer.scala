@@ -5,6 +5,7 @@ import java.io._
 import scala.io._
 
 object NameServer {
+	val nameFileKey = "key.txt"
 	val separator = "#@#"
 	val OPERATION = Array("ASSOCIAR", "REMOVER", "RECUPERAR")
 	
@@ -42,15 +43,19 @@ object NameServer {
 	def listenServer(server: ServerSocket) = {
 		while (true) {
 			val s = server.accept()
-			val in = new BufferedSource(s.getInputStream()).getLines()
-			val out = new PrintStream(s.getOutputStream())
+			val in = new ObjectInputStream(s.getInputStream())
+			val out = new ObjectOutputStream(s.getOutputStream())
 		    
-			val operation = in.next().toUpperCase()
+			val objOperation = in.readObject()
 			
-			println("\nServer Name Received: " + operation)
+			//decrypt command
+			var operation = ""
+			if(objOperation.isInstanceOf[Array[Byte]]){
+				operation = EncryptAES.decryption(objOperation.asInstanceOf[Array[Byte]], EncryptAES.readKeyInFile(nameFileKey))
+				operation = operation.toUpperCase()
+			}
 			
 			var response = ""
-
 			//return all operations servers
 			if(operation == "GET_ALL_SERVERS"){
 				ADDR_SERVERS.foreach{ case(key, value) =>
@@ -63,14 +68,22 @@ object NameServer {
 				if(ADDR_SERVERS.contains(operation)){
 					val addresses = ADDR_SERVERS(operation).toList
 					var online = false
-					do{
+					var count = 0
+					while(!online && count < addresses.size){
 						response = addresses(loadBalancing(operation))
 						online = isServerOnline(response)
-					}while(!online)
+						count +=1
+					}
 				}
 			}
 			
-			out.println(response)
+			println("\nServer Name Received: " + operation)
+			//println("\nServer Name Respond: " + response)
+			
+			//encrypt response
+			val responseBytes = EncryptAES.encryption(response, EncryptAES.readKeyInFile(nameFileKey))
+			
+			out.writeObject(responseBytes)
 			out.flush()
 			s.close()
 		}
@@ -94,7 +107,7 @@ object NameServer {
 
 	def isServerOnline(address: String):Boolean = {
 		val (addrServer, addrPort) = (address.split(":")(0), address.split(":")(1))
-		
+
 		try {
 			val s = new Socket(InetAddress.getByName(addrServer), addrPort.toInt)
 			s.close()
