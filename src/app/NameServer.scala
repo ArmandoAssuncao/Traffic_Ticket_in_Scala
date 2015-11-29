@@ -45,13 +45,14 @@ object NameServer {
 			val in = new BufferedSource(s.getInputStream()).getLines()
 			val out = new PrintStream(s.getOutputStream())
 		    
-			val operation = in.next()
+			val operation = in.next().toUpperCase()
 			
 			println("\nServer Name Received: " + operation)
 			
 			var response = ""
 
-			if(operation.toUpperCase() == "GET_ALL_SERVERS"){
+			//return all operations servers
+			if(operation == "GET_ALL_SERVERS"){
 				ADDR_SERVERS.foreach{ case(key, value) =>
 					value.foreach {
 						response += _ + separator
@@ -59,9 +60,13 @@ object NameServer {
 				}
 			}
 			else{
-				ADDR_SERVERS.foreach{ case(key, value) =>
-					if(key.equalsIgnoreCase(operation))
-						response = value.toList(loadBalancing(operation))
+				if(ADDR_SERVERS.contains(operation)){
+					val addresses = ADDR_SERVERS(operation).toList
+					var online = false
+					do{
+						response = addresses(loadBalancing(operation))
+						online = isServerOnline(response)
+					}while(!online)
 				}
 			}
 			
@@ -84,6 +89,20 @@ object NameServer {
 				BALANCING_SERVERS(oper) = 0
 		}
 		response
+	}
+	
+
+	def isServerOnline(address: String):Boolean = {
+		val (addrServer, addrPort) = (address.split(":")(0), address.split(":")(1))
+		
+		try {
+			val s = new Socket(InetAddress.getByName(addrServer), addrPort.toInt)
+			s.close()
+	        true
+	    }
+		catch {
+	        case e:ConnectException => false
+	    }
 	}
 	
 }

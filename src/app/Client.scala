@@ -80,8 +80,6 @@ class UI(val funcConnect: (String) => Object, val separator:String){
 					response = funcConnect(request)
 				else
 					response = "Complete all fields"
-					
-				printResponse(response)
 			}
 		}
 	}//panelSouth
@@ -163,7 +161,7 @@ class UI(val funcConnect: (String) => Object, val separator:String){
 
 object Client {
 	val separator = "#@#"
-	val addrServer = "localhost"
+	val addrServer = "localhost" //address Server Name
 	val addrPort = 5000
 	
 	def main(args: Array[String]): Unit = {
@@ -198,6 +196,7 @@ object Client {
 		}
 	}
 	
+	//send command to operations server
 	def sendCommand(addr:String, port:Int, command:String) = {
 		val s = new Socket(InetAddress.getByName(addr), port)
 		val out = new PrintStream(s.getOutputStream())
