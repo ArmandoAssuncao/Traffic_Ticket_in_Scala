@@ -7,7 +7,7 @@ import scala.io._
 object Server {
 	val nameFileKey = "key.txt"
 	val addr = InetAddress.getByName("localhost")
-	val port = 6789
+	val port = 6785
 	
 	val connection = new SqliteConnection()
 	val separator = "#@#"
@@ -26,7 +26,7 @@ object Server {
 		    var s = server.accept()
 		    val input = s.getInputStream()
 
-		    if(input.available() != 0){
+		    try{
 			    var in = new ObjectInputStream(input)
 			    
 			    if(true){
@@ -69,6 +69,9 @@ object Server {
 				    out.writeObject(response)
 			    }
 		    }
+		    catch{
+				case e:EOFException => false
+			}
 		    s.close()
 		    //println("end connection")
 		}
